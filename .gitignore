@@ -26,3 +26,8 @@ ts-debug.log*
 
 # vercel
 .vercel
+
+# tool
+tool/dist
+tool/node_modules
+tool/.next
