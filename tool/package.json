@@ -87,12 +87,17 @@
     "files": [
       "main.js",
       "preload.js",
-      ".next/server/**/*",
-      ".next/static/**/*",
+      "out/**/*",
       "public/**/*"
     ],
     "win": {
-      "target": "nsis"
+      "target": [
+        {
+          "target": "dir",
+          "arch": ["x64"]
+        }
+      ],
+      "sign": false
     }
   }
 }

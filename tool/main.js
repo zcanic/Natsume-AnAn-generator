@@ -14,23 +14,14 @@ function createWindow() {
     },
   });
 
-  const startUrl = process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3000'
-    : `file://${path.join(__dirname, '.next/server/app/index.html')}`; // Adjust for production
+  const isDev = process.env.NODE_ENV === 'development';
 
-  // For now, in dev mode, we load localhost
-  if (process.env.NODE_ENV === 'development') {
-      mainWindow.loadURL('http://localhost:3000');
-      mainWindow.webContents.openDevTools();
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.webContents.openDevTools();
   } else {
-      // In production, we might need a different strategy for Next.js
-      // Often it's easier to run a local server or use static export
-      // For this MVP, let's assume we are focusing on the dev/tool aspect first
-      // But for a real build, we should use 'next export' (output: export) and load index.html
-      // OR use a custom server.
-      // Let's try to load the dev URL for now or a static file if exported.
-      // To keep it simple for the "tool" request:
-      mainWindow.loadURL('http://localhost:3000'); 
+    // Production: load static export from 'out' folder
+    mainWindow.loadFile(path.join(__dirname, 'out', 'index.html'));
   }
 
   mainWindow.on('closed', function () {

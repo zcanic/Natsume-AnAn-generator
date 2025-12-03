@@ -70,9 +70,9 @@ export default function MemeGenerator() {
       fallbackImg.onerror = () => {
         console.log("[v0] Fallback also failed")
       }
-      fallbackImg.src = "/images/img-3923.jpeg"
+      fallbackImg.src = "./images/img-3923.jpeg"
     }
-    img.src = "/meme-template.png"
+    img.src = "./meme-template.png"
   }, [])
 
   useEffect(() => {
