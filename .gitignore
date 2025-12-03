@@ -1,5 +1,5 @@
 # dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.js
 
@@ -7,13 +7,14 @@
 /coverage
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 /build
 
 # misc
 .DS_Store
 *.pem
+Thumbs.db
 
 # debug
 npm-debug.log*
@@ -26,3 +27,14 @@ ts-debug.log*
 
 # vercel
 .vercel
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# tool (Electron desktop app)
+tool/node_modules/
+tool/.next/
+tool/out/
+tool/dist/

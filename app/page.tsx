@@ -5,16 +5,16 @@ import { Download, Type, Move, AlignLeft, AlignCenter, AlignRight, RotateCcw, Ro
 
 export default function MemeGenerator() {
   const [text, setText] = useState("")
-  const [fontSize, setFontSize] = useState(160)
+  const [fontSize, setFontSize] = useState(200)
   const [lineHeight, setLineHeight] = useState(1.2)
   const [letterSpacing, setLetterSpacing] = useState(0)
-  const [maxLineWidth, setMaxLineWidth] = useState(100)
-  const [offsetX, setOffsetX] = useState(-5)
+  const [maxLineWidth, setMaxLineWidth] = useState(84)
+  const [offsetX, setOffsetX] = useState(4)
   const [offsetY, setOffsetY] = useState(5)
   const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("center")
-  const [fontFamily, setFontFamily] = useState("Noto Sans SC")
+  const [fontFamily, setFontFamily] = useState("Source Han Sans CN")
   const [textColor, setTextColor] = useState("#1a1a1a")
-  const [fontWeight, setFontWeight] = useState<"normal" | "bold">("normal")
+  const [fontWeight, setFontWeight] = useState<"normal" | "bold">("bold")
   const [rotation, setRotation] = useState(0)
   const [isDownloading, setIsDownloading] = useState(false)
 
@@ -224,16 +224,16 @@ export default function MemeGenerator() {
   }, [imageLoaded, isDownloading])
 
   const resetSettings = () => {
-    setFontSize(160)
+    setFontSize(200)
     setLineHeight(1.2)
     setLetterSpacing(0)
-    setMaxLineWidth(100)
-    setOffsetX(-5)
+    setMaxLineWidth(84)
+    setOffsetX(4)
     setOffsetY(5)
     setTextAlign("center")
-    setFontFamily("Noto Sans SC")
+    setFontFamily("Source Han Sans CN")
     setTextColor("#1a1a1a")
-    setFontWeight("normal")
+    setFontWeight("bold")
     setRotation(0)
   }
 
