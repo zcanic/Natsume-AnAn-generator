@@ -5,8 +5,8 @@ let mainWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: 1400,
+    height: 900,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -51,8 +51,9 @@ app.whenReady().then(() => {
     if (text) {
         if (mainWindow) {
             mainWindow.webContents.send('generate-meme-from-text', text);
-            mainWindow.show();
-            mainWindow.focus();
+            // Silent mode: do not show or focus window
+            // mainWindow.show();
+            // mainWindow.focus();
         }
     } else {
         console.log('Clipboard is empty');

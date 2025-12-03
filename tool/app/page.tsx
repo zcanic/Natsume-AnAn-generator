@@ -14,7 +14,7 @@ export default function MemeGenerator() {
   const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("center")
   const [fontFamily, setFontFamily] = useState("Source Han Sans CN")
   const [textColor, setTextColor] = useState("#1a1a1a")
-  const [fontWeight, setFontWeight] = useState<"normal" | "bold">("normal")
+  const [fontWeight, setFontWeight] = useState<"normal" | "bold">("bold")
   const [rotation, setRotation] = useState(0)
   const [isDownloading, setIsDownloading] = useState(false)
 
@@ -233,7 +233,7 @@ export default function MemeGenerator() {
     setTextAlign("center")
     setFontFamily("Source Han Sans CN")
     setTextColor("#1a1a1a")
-    setFontWeight("normal")
+    setFontWeight("bold")
     setRotation(0)
   }
 
