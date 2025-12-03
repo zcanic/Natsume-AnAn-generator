@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useRef, useCallback, useEffect } from "react"
-import { Download, Type, Move, AlignLeft, AlignCenter, AlignRight, RotateCcw, RotateCw } from "lucide-react"
+import { Download, Type, Move, AlignLeft, AlignCenter, AlignRight, RotateCcw, RotateCw, Zap } from "lucide-react"
 
 export default function MemeGenerator() {
   const [text, setText] = useState("")
-  const [fontSize, setFontSize] = useState(200)
+  const [baseFontSize, setBaseFontSize] = useState(350) // 基础字号，自动模式下作为最大字号
+  const [autoFitEnabled, setAutoFitEnabled] = useState(true) // 自动适配开关
   const [lineHeight, setLineHeight] = useState(1.2)
   const [letterSpacing, setLetterSpacing] = useState(0)
   const [maxLineWidth, setMaxLineWidth] = useState(84)
@@ -17,10 +18,12 @@ export default function MemeGenerator() {
   const [fontWeight, setFontWeight] = useState<"normal" | "bold">("bold")
   const [rotation, setRotation] = useState(0)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [actualFontSize, setActualFontSize] = useState(350) // 实际使用的字号
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [imageLoaded, setImageLoaded] = useState(false)
   const imageRef = useRef<HTMLImageElement | null>(null)
+  const renderTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const sketchbookArea = {
     x: 0.08,
@@ -48,7 +51,8 @@ export default function MemeGenerator() {
     { name: "Trebuchet MS", label: "Trebuchet" },
   ]
 
-  const fontSizePresets = [12, 16, 24, 32, 48, 64, 96, 128, 160, 200, 256, 300, 400, 500]
+  const fontSizePresets = [64, 96, 128, 160, 200, 256, 300, 350, 400, 450, 500]
+  const MIN_FONT_SIZE = 24 // 最小字号
 
   const loadImage = useCallback(() => {
     const img = new Image()
@@ -79,6 +83,42 @@ export default function MemeGenerator() {
     loadImage()
   }, [loadImage])
 
+  // 计算单行文字在指定字号下的宽度
+  const measureTextWidth = useCallback((ctx: CanvasRenderingContext2D, lineText: string, fontSize: number) => {
+    ctx.font = `${fontWeight} ${fontSize}px "${fontFamily}", cursive, sans-serif`
+    if (letterSpacing !== 0) {
+      (ctx as any).letterSpacing = `${letterSpacing}px`
+    }
+    return ctx.measureText(lineText).width
+  }, [fontFamily, fontWeight, letterSpacing])
+
+  // 计算最佳字号：使每行都能 fit 进最大宽度
+  const calculateOptimalFontSize = useCallback((ctx: CanvasRenderingContext2D, lines: string[], maxWidth: number): number => {
+    if (!autoFitEnabled) return baseFontSize
+    if (lines.length === 0 || lines.every(l => l === "")) return baseFontSize
+
+    let optimalSize = baseFontSize
+
+    // 对每一行找到最大能 fit 的字号
+    for (const line of lines) {
+      if (line === "") continue
+      
+      let testSize = baseFontSize
+      let lineWidth = measureTextWidth(ctx, line, testSize)
+      
+      // 如果当前字号超出宽度，逐步减小
+      while (lineWidth > maxWidth - 20 && testSize > MIN_FONT_SIZE) {
+        testSize -= 4 // 每次减少 4px
+        lineWidth = measureTextWidth(ctx, line, testSize)
+      }
+      
+      // 取所有行中最小的字号
+      optimalSize = Math.min(optimalSize, testSize)
+    }
+
+    return Math.max(optimalSize, MIN_FONT_SIZE)
+  }, [autoFitEnabled, baseFontSize, measureTextWidth])
+
   const drawCanvas = useCallback(() => {
     const img = imageRef.current
     const canvas = canvasRef.current
@@ -92,6 +132,11 @@ export default function MemeGenerator() {
 
     ctx.drawImage(img, 0, 0)
 
+    if (!text.trim()) {
+      setActualFontSize(baseFontSize)
+      return
+    }
+
     const areaX = img.width * sketchbookArea.x
     const areaY = img.height * sketchbookArea.y
     const areaWidth = img.width * sketchbookArea.width
@@ -101,12 +146,19 @@ export default function MemeGenerator() {
     const textY = areaY + (areaHeight * offsetY) / 100
     const textWidth = (areaWidth * maxLineWidth) / 100
 
+    // 按用户换行分割
+    const userLines = text.split("\n")
+    
+    // 计算最佳字号
+    const fontSize = calculateOptimalFontSize(ctx, userLines, textWidth)
+    setActualFontSize(fontSize)
+
     ctx.fillStyle = textColor
     ctx.font = `${fontWeight} ${fontSize}px "${fontFamily}", cursive, sans-serif`
     ctx.textBaseline = "middle"
 
     if (letterSpacing !== 0) {
-      ;(ctx as any).letterSpacing = `${letterSpacing}px`
+      (ctx as any).letterSpacing = `${letterSpacing}px`
     }
 
     if (textAlign === "left") {
@@ -117,26 +169,8 @@ export default function MemeGenerator() {
       ctx.textAlign = "center"
     }
 
-    const words = text.split("")
-    const lines: string[] = []
-    let currentLine = ""
-
-    for (const char of words) {
-      if (char === "\n") {
-        lines.push(currentLine)
-        currentLine = ""
-        continue
-      }
-      const testLine = currentLine + char
-      const metrics = ctx.measureText(testLine)
-      if (metrics.width > textWidth - 20 && currentLine !== "") {
-        lines.push(currentLine)
-        currentLine = char
-      } else {
-        currentLine = testLine
-      }
-    }
-    if (currentLine) lines.push(currentLine)
+    // 用户换行 = 实际换行（不再自动换行）
+    const lines = userLines
 
     const lineHeightPx = fontSize * lineHeight
     const totalTextHeight = lines.length * lineHeightPx
@@ -166,7 +200,8 @@ export default function MemeGenerator() {
     ctx.restore()
   }, [
     text,
-    fontSize,
+    baseFontSize,
+    autoFitEnabled,
     lineHeight,
     letterSpacing,
     maxLineWidth,
@@ -177,13 +212,60 @@ export default function MemeGenerator() {
     textColor,
     fontWeight,
     rotation,
+    calculateOptimalFontSize,
   ])
 
+  // 延迟渲染：普通输入延迟 500ms
+  const scheduleRender = useCallback(() => {
+    if (renderTimeoutRef.current) {
+      clearTimeout(renderTimeoutRef.current)
+    }
+    renderTimeoutRef.current = setTimeout(() => {
+      drawCanvas()
+    }, 500)
+  }, [drawCanvas])
+
+  // 立即渲染（用于非文字输入的参数变化）
+  const renderImmediately = useCallback(() => {
+    if (renderTimeoutRef.current) {
+      clearTimeout(renderTimeoutRef.current)
+    }
+    drawCanvas()
+  }, [drawCanvas])
+
+  // 文字变化时使用延迟渲染
   useEffect(() => {
     if (imageLoaded) {
-      drawCanvas()
+      scheduleRender()
     }
-  }, [imageLoaded, drawCanvas])
+    return () => {
+      if (renderTimeoutRef.current) {
+        clearTimeout(renderTimeoutRef.current)
+      }
+    }
+  }, [text, imageLoaded, scheduleRender])
+
+  // 其他参数变化时立即渲染
+  useEffect(() => {
+    if (imageLoaded) {
+      renderImmediately()
+    }
+  }, [
+    imageLoaded,
+    baseFontSize,
+    autoFitEnabled,
+    lineHeight,
+    letterSpacing,
+    maxLineWidth,
+    offsetX,
+    offsetY,
+    textAlign,
+    fontFamily,
+    textColor,
+    fontWeight,
+    rotation,
+    renderImmediately,
+  ])
 
   const downloadImage = useCallback(() => {
     const canvas = canvasRef.current
@@ -224,7 +306,8 @@ export default function MemeGenerator() {
   }, [imageLoaded, isDownloading])
 
   const resetSettings = () => {
-    setFontSize(200)
+    setBaseFontSize(350)
+    setAutoFitEnabled(true)
     setLineHeight(1.2)
     setLetterSpacing(0)
     setMaxLineWidth(84)
@@ -273,7 +356,7 @@ export default function MemeGenerator() {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="在这里输入文字...&#10;支持换行"
+            placeholder="在这里输入文字...&#10;按 Enter 换行"
             className="w-full p-3 border border-border rounded-lg resize-none h-28 focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground placeholder:text-muted-foreground"
           />
         </div>
@@ -300,16 +383,45 @@ export default function MemeGenerator() {
               </select>
             </div>
 
+            {/* 自动适配开关 */}
+            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Zap size={16} className={autoFitEnabled ? "text-yellow-500" : "text-muted-foreground"} />
+                <span className="text-sm font-medium text-foreground">自动适配字号</span>
+              </div>
+              <div className="flex items-center gap-3">
+                {autoFitEnabled && (
+                  <span className="text-xs text-muted-foreground">
+                    当前: {actualFontSize}px
+                  </span>
+                )}
+                <button
+                  onClick={() => setAutoFitEnabled(!autoFitEnabled)}
+                  className={`relative w-12 h-6 rounded-full transition-colors ${
+                    autoFitEnabled ? "bg-foreground" : "bg-muted-foreground/30"
+                  }`}
+                >
+                  <span
+                    className={`absolute top-1 w-4 h-4 rounded-full bg-background transition-transform ${
+                      autoFitEnabled ? "left-7" : "left-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
             <div>
               <div className="flex justify-between items-center mb-1.5">
-                <label className="text-xs text-muted-foreground">字号</label>
+                <label className="text-xs text-muted-foreground">
+                  {autoFitEnabled ? "最大字号" : "字号"}
+                </label>
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
-                    min="4"
-                    max="300"
-                    value={fontSize}
-                    onChange={(e) => setFontSize(Math.min(300, Math.max(4, Number(e.target.value))))}
+                    min="24"
+                    max="500"
+                    value={baseFontSize}
+                    onChange={(e) => setBaseFontSize(Math.min(500, Math.max(24, Number(e.target.value))))}
                     className="w-16 px-2 py-0.5 text-xs font-mono bg-muted border border-border rounded text-foreground text-center focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                   <span className="text-xs text-muted-foreground">px</span>
@@ -317,19 +429,19 @@ export default function MemeGenerator() {
               </div>
               <input
                 type="range"
-                min="4"
-                max="300"
-                value={fontSize}
-                onChange={(e) => setFontSize(Number(e.target.value))}
+                min="24"
+                max="500"
+                value={baseFontSize}
+                onChange={(e) => setBaseFontSize(Number(e.target.value))}
                 className="w-full accent-foreground h-2"
               />
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {fontSizePresets.map((size) => (
                   <button
                     key={size}
-                    onClick={() => setFontSize(size)}
+                    onClick={() => setBaseFontSize(size)}
                     className={`px-2 py-1 text-xs rounded transition-colors ${
-                      fontSize === size
+                      baseFontSize === size
                         ? "bg-foreground text-background"
                         : "bg-muted text-muted-foreground hover:bg-accent"
                     }`}
